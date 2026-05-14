@@ -1,578 +1,1341 @@
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ADM Strategy | HealthStream Solutions</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Enterprise Intelligence Platform | HealthStream Solutions</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        dark: '#050505',
+                        panel: 'rgba(20, 20, 20, 0.6)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
     <style>
-        :root {
-            --brand-dark: #001e3c;
-            --brand-blue: #007bff;
-            --brand-green: #28a745;
-            --sidebar-width: 280px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #050505;
+            color: #e5e5e5;
+            margin: 0;
+            overflow: hidden; /* Handle scrolling inside the viewport */
         }
-        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; color: #334155; margin: 0; scroll-behavior: smooth; }
         
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: var(--brand-dark);
-            height: 100vh;
+        /* Cinematic Background */
+        #canvas-bg {
             position: fixed;
-            color: white;
-            padding: 2rem 1.5rem;
-            overflow-y: auto;
-            z-index: 100;
-        }
-        .sidebar h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 2rem; color: #38bdf8; letter-spacing: 1px; }
-        .nav-link { 
-            color: #94a3b8; font-size: 0.9rem; padding: 0.75rem 0; 
-            text-decoration: none; display: block; border-bottom: 1px solid #1e293b;
-            transition: all 0.3s;
-        }
-        .nav-link:hover { color: white; padding-left: 10px; }
-
-        .main-content { margin-left: var(--sidebar-width); padding: 4rem; }
-        
-        .kpi-card { 
-            background: white; border-radius: 12px; padding: 1.5rem; 
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border-top: 4px solid var(--brand-blue);
+            top: 0;
+            left: 0;
+            width: 100%;
             height: 100%;
+            z-index: -1;
+            background: #050505;
         }
-        .kpi-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: #64748b; }
-        .kpi-value { font-size: 1.8rem; font-weight: 700; color: var(--brand-dark); margin-top: 0.5rem; }
 
-        .section-container { 
-            background: white; border-radius: 12px; padding: 3rem; 
-            margin-bottom: 2rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05); 
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url('https://grainy-gradients.vercel.app/noise.svg');
         }
-        h2.section-title { 
-            font-weight: 700; color: var(--brand-dark); margin-bottom: 1.5rem; 
-            border-left: 5px solid var(--brand-blue); padding-left: 1rem;
+
+        .glass-panel {
+            background: rgba(10, 10, 12, 0.85);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(25, 25, 30, 0.85);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-top: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.7);
+            transition: all 0.3s ease;
+        }
+
+        .glass-card:hover {
+            background: rgba(30, 30, 35, 0.95);
+            border-top-color: rgba(59, 130, 246, 0.5);
+            box-shadow: 0 30px 60px -15px rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Sidebar Nav Item Styling */
+        .nav-item {
+            position: relative;
+            transition: all 0.2s ease;
+            overflow: hidden;
+            border-left: 2px solid transparent;
+        }
+
+        .nav-item.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-left-color: #3b82f6;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* KPI Metrics Hover */
+        .kpi-metric {
+            padding: 0.4rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid transparent;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            cursor: default;
+        }
+
+        .kpi-metric:hover {
+            background: rgba(255, 255, 255, 0.02);
+            border-color: rgba(255, 255, 255, 0.08);
+            border-top-color: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.7), 0 0 20px -5px rgba(59, 130, 246, 0.15);
+        }
+
+        /* Viewport Container */
+        .section-viewport {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 1rem;
         }
         
-        /* 6-Column Matrix Styling */
-        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 1.5rem; table-layout: fixed; }
-        .matrix-table th { background: var(--brand-dark); color: white; padding: 12px; font-size: 0.7rem; text-align: center; border: 1px solid #dee2e6; }
-        .matrix-table td { padding: 12px; border: 1px solid #dee2e6; vertical-align: top; font-size: 0.8rem; background: #fff; height: 150px; }
+        .section-viewport.active {
+            display: block;
+        }
+
+        /* Exec level scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        /* Rendered Markdown Styling */
+        .markdown-content {
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
         
-        .text-content p { line-height: 1.7; font-size: 1.05rem; margin-bottom: 1.25rem; }
-        .chart-container { position: relative; height: 400px; width: 100%; margin-top: 2rem; padding: 1rem; border: 1px solid #eee; border-radius: 8px; }
+        .markdown-content h1, .markdown-content h2, .markdown-content h3, .markdown-content h4 {
+            color: #ffffff;
+            font-weight: 600;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+            letter-spacing: -0.01em;
+        }
+        
+        .markdown-content h1 { font-size: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.75rem; }
+        .markdown-content h2 { font-size: 1.25rem; color: #f8fafc; }
+        .markdown-content h3 { font-size: 1.1rem; color: #e2e8f0; }
+        
+        .markdown-content p { margin-bottom: 1.25rem; color: #cbd5e1; }
+        .markdown-content strong { color: #ffffff; font-weight: 700; }
+        
+        .markdown-content ul {
+            list-style-type: none;
+            padding-left: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .markdown-content li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .markdown-content li::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.6rem;
+            width: 4px;
+            height: 4px;
+            background: #3b82f6;
+            border-radius: 50%;
+        }
+
+        .markdown-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+        }
+        .markdown-content th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            color: #f8fafc;
+            font-weight: 600;
+        }
+        .markdown-content td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            color: #cbd5e1;
+        }
+
+        /* Matrix Columns */
+        .matrix-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1rem; }
+        .matrix-col {
+            background: rgba(20,20,25,0.4);
+            border: 1px solid rgba(255,255,255,0.03);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .matrix-header {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 600;
+            color: #94a3b8;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 0.5rem;
+        }
+        .matrix-item {
+            background: rgba(255,255,255,0.02);
+            border-left: 2px solid;
+            padding: 0.75rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            color: #cbd5e1;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+        .matrix-item:hover { background: rgba(255,255,255,0.05); transform: translateX(2px); }
+        
+        .matrix-item.retire { border-color: #ef4444; }
+        .matrix-item.retain { border-color: #64748b; }
+        .matrix-item.rehost { border-color: #3b82f6; }
+        .matrix-item.replatform { border-color: #8b5cf6; }
+        .matrix-item.refactor { border-color: #f59e0b; }
+        .matrix-item.rearchitect { border-color: #10b981; }
     </style>
 </head>
-<body>
+<body class="flex w-screen h-screen overflow-hidden selection:bg-blue-500/30">
 
-<div class="sidebar">
-    <h2>ADM STRATEGY</h2>
-    <nav>
-        
-        
-        <a href="#Executive-Summary" class="nav-link">01. Executive Summary</a>
-        
-        
-        <a href="#Portfolio-Analysis" class="nav-link">02. Portfolio Analysis</a>
-        
-        
-        <a href="#App-Inventory" class="nav-link">03. App Inventory</a>
-        
-        
-        <a href="#Competitive-Benchmarking" class="nav-link">04. Competitive Benchmarking</a>
-        
-        
-        <a href="#AI-Transformation-Strategy" class="nav-link">05. AI Transformation Strategy</a>
-        
-        
-        <a href="#Modernization-Roadmap" class="nav-link">06. Modernization Roadmap</a>
-        
-        
-        <a href="#Cloud-&-Data-Strategy" class="nav-link">07. Cloud & Data Strategy</a>
-        
-        
-        <a href="#Financials" class="nav-link">08. Financials</a>
-        
-        
-        <a href="#Execution-Roadmap" class="nav-link">09. Execution Roadmap</a>
-        
-        
-        <a href="#Delivery-Center-Architecture" class="nav-link">10. Delivery Center Architecture</a>
-        
-        
-        <a href="#Benchmarking-Summary" class="nav-link">11. Benchmarking Summary</a>
-        
-        
-        <a href="#Partnership-Overview" class="nav-link">12. Partnership Overview</a>
-        
-    </nav>
-</div>
+    <canvas id="canvas-bg"></canvas>
+    <div class="noise-overlay"></div>
 
-<div class="main-content">
-    <header class="mb-5">
-        <span class="badge bg-primary mb-2">CONFIDENTIAL TECHNICAL ASSESSMENT</span>
-        <h1 class="display-4 fw-bold text-dark">HealthStream Solutions ADM</h1>
-        <p class="lead text-muted">Strategic Modernization & AI Transformation Roadmap (2026-2031)</p>
-    </header>
-
-    <div class="row g-4 mb-5">
-        <div class="col-md-4">
-            <div class="kpi-card">
-                <div class="kpi-label">5-Year TCV Projection</div>
-                <div class="kpi-value">$125,000,000</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="kpi-card" style="border-top-color: var(--brand-green);">
-                <div class="kpi-label">Efficiency ROI</div>
-                <div class="kpi-value">165.0%</div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="kpi-card">
-                <div class="kpi-label">Est. Net Savings (5Yr)</div>
-                <div class="kpi-value">$41,250,000</div>
-            </div>
-        </div>
+    <!-- Global Loader -->
+    <div id="loader" class="fixed inset-0 z-[100] bg-[#050505] flex flex-col items-center justify-center">
+        <div class="w-12 h-12 border-2 border-blue-500/20 border-t-blue-500 rounded-full animate-spin mb-4"></div>
+        <div class="text-[10px] font-mono text-blue-500/60 uppercase tracking-[0.3em]">Neural Interface Initializing</div>
     </div>
 
-    
-    <div id="Executive-Summary" class="section-container">
-        <h2 class="section-title">Executive Summary</h2>
-        <div class="text-content">
-            <p><strong>Executive Summary</strong></p>
-<h3>Introduction to HealthStream Solutions' ADM Transformation</h3>
-<p>HealthStream Solutions, a leading healthcare organization, is poised to embark on a transformative journey, shifting its Application Development and Maintenance (ADM) paradigm from a legacy-based approach to an innovative, industrialized delivery model. This strategic shift is expected to yield substantial financial benefits, with a Total Contract Value (TCV) of $125,000,000 over a five-year period.</p>
-<h3>Key Insights and Financial Highlights</h3>
-<p>The following key points summarize the expected outcomes of this transformation:
-* Total Savings: $41,250,000.0, representing a significant reduction in ADM spend
-* Return on Investment (ROI): 165.0%, demonstrating a substantial return on the investment made in the transformation
-* Inflection Point: The shift to an innovative ADM model is expected to occur within the first two years, after which the organization will begin to realize the full benefits of industrialized delivery, including increased digital velocity and reduced technical debt</p>
-<h3>Legacy to Innovation Shift</h3>
-<p>The current ADM spend of $25,000,000 will be optimized through the adoption of innovative technologies, processes, and methodologies, enabling HealthStream Solutions to achieve greater efficiency, agility, and scalability. By leveraging industrialized delivery, the organization will be able to accelerate its digital transformation, reduce costs, and improve overall quality of service. The expected TCV of $125,000,000 will be achieved through a combination of cost savings, increased productivity, and enhanced revenue growth.</p>
-<h3>Conclusion</h3>
-<p>In conclusion, the proposed ADM transformation is expected to have a significant impact on HealthStream Solutions' bottom line, with a total savings of $41,250,000.0 and an ROI of 165.0%. By shifting from a legacy-based approach to an innovative, industrialized delivery model, the organization will be able to achieve greater digital velocity, reduce technical debt, and improve overall competitiveness in the healthcare market. With a clear understanding of the expected financial benefits and the inflection point for the transformation, HealthStream Solutions is well-positioned to embark on this strategic journey and achieve long-term success.</p>
+    <!-- Executive Sidebar -->
+    <aside class="w-[280px] h-full glass-panel flex flex-col z-20 border-r border-white/5 relative shrink-0">
+        <div class="p-6 border-b border-white/5">
+            <div class="flex items-center gap-2 mb-4">
+                <div class="w-6 h-6 rounded bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
+                    <svg class="w-3 h-3 text-blue-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                </div>
+                <span class="text-[10px] text-blue-400 font-mono tracking-widest uppercase">Palantir Ops // ADM</span>
+            </div>
+            <h1 class="text-lg font-medium text-white tracking-tight leading-tight">HealthStream Solutions</h1>
+            <div class="text-[11px] text-slate-500 font-mono mt-1 uppercase">Transformation Intelligence</div>
         </div>
 
+        <nav class="flex-1 overflow-y-auto py-4 flex flex-col gap-1 z-20 px-3" id="sidebar-nav">
+            
+            <button onclick="navigateTo('Executive-Summary')" 
+                    id="nav-Executive-Summary"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Executive Summary</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">01</span>
+            </button>
+            
+            <button onclick="navigateTo('Portfolio-Analysis')" 
+                    id="nav-Portfolio-Analysis"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Portfolio Analysis</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">02</span>
+            </button>
+            
+            <button onclick="navigateTo('App-Inventory')" 
+                    id="nav-App-Inventory"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">App Inventory</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">03</span>
+            </button>
+            
+            <button onclick="navigateTo('Competitive-Benchmarking')" 
+                    id="nav-Competitive-Benchmarking"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Competitive Benchmarking</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">04</span>
+            </button>
+            
+            <button onclick="navigateTo('AI-Transformation-Strategy')" 
+                    id="nav-AI-Transformation-Strategy"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">AI Transformation Strategy</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">05</span>
+            </button>
+            
+            <button onclick="navigateTo('Modernization-Roadmap')" 
+                    id="nav-Modernization-Roadmap"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Modernization Roadmap</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">06</span>
+            </button>
+            
+            <button onclick="navigateTo('Cloud-&-Data-Strategy')" 
+                    id="nav-Cloud-&-Data-Strategy"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Cloud & Data Strategy</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">07</span>
+            </button>
+            
+            <button onclick="navigateTo('Financials')" 
+                    id="nav-Financials"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Financials</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">08</span>
+            </button>
+            
+            <button onclick="navigateTo('Execution-Roadmap')" 
+                    id="nav-Execution-Roadmap"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Execution Roadmap</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">09</span>
+            </button>
+            
+            <button onclick="navigateTo('Delivery-Center-Architecture')" 
+                    id="nav-Delivery-Center-Architecture"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Delivery Center Architecture</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">10</span>
+            </button>
+            
+            <button onclick="navigateTo('Benchmarking-Summary')" 
+                    id="nav-Benchmarking-Summary"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Benchmarking Summary</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">11</span>
+            </button>
+            
+            <button onclick="navigateTo('Partnership-Overview')" 
+                    id="nav-Partnership-Overview"
+                    class="nav-item w-full text-left px-4 py-2.5 rounded-md text-sm text-slate-300 hover:text-white hover:bg-white/10 flex items-center justify-between group">
+                <span class="font-medium tracking-wide">Partnership Overview</span>
+                <span class="text-[10px] font-mono opacity-0 group-hover:opacity-60 transition-opacity">12</span>
+            </button>
+            
+        </nav>
         
-        
-
-        
-        
-    </div>
-    
-    <div id="Portfolio-Analysis" class="section-container">
-        <h2 class="section-title">Portfolio Analysis</h2>
-        <div class="text-content">
-            <p><strong>Portfolio Analysis</strong></p>
-<h3>Introduction to HealthStream Solutions' ADM Portfolio</h3>
-<p>HealthStream Solutions, a leading healthcare company, has engaged Tholons to conduct a comprehensive analysis of their Application Development and Maintenance (ADM) portfolio. With a current annual spend of $25,000,000, the company is seeking to optimize its ADM investments and improve overall digital velocity. Our analysis reveals a significant opportunity for HealthStream Solutions to reduce costs, improve efficiency, and enhance its digital capabilities.</p>
-<h3>Key Insights and Findings</h3>
-<ul>
-<li>The 5-Year Total Contract Value (TCV) of $125,000,000 presents a substantial opportunity for HealthStream Solutions to renegotiate contracts, streamline processes, and industrialize delivery.</li>
-<li>By optimizing its ADM portfolio, HealthStream Solutions can achieve total savings of $41,250,000, representing a significant reduction in technical debt and improved return on investment (ROI).</li>
-<li>The expected ROI of 165.0% demonstrates the potential for HealthStream Solutions to generate substantial returns on its ADM investments, enabling the company to reinvest in digital transformation initiatives and drive business growth.</li>
-<li>Our analysis highlights the need for HealthStream Solutions to focus on digital velocity, ensuring that its ADM portfolio is aligned with business objectives and capable of responding to changing market conditions.</li>
-</ul>
-<h3>Strategic Recommendations</h3>
-<p>To achieve the desired outcomes, we recommend that HealthStream Solutions:
-* Adopt a proactive approach to contract management, leveraging the 5-Year TCV to renegotiate contracts and optimize pricing.
-* Implement industrialized delivery models, leveraging automation, and artificial intelligence to reduce technical debt and improve efficiency.
-* Develop a comprehensive digital transformation strategy, aligning the ADM portfolio with business objectives and prioritizing initiatives that drive digital velocity.
-* Establish a robust governance framework, ensuring that ADM investments are aligned with business outcomes and that ROI is continuously monitored and optimized.</p>
-<h3>Conclusion</h3>
-<p>In conclusion, our portfolio analysis reveals a significant opportunity for HealthStream Solutions to optimize its ADM investments, reduce costs, and improve digital velocity. By leveraging the insights and recommendations outlined above, HealthStream Solutions can achieve substantial savings, improve ROI, and drive business growth through targeted digital transformation initiatives. With a clear understanding of the 5-Year TCV, total savings, and expected ROI, HealthStream Solutions is well-positioned to make informed decisions about its ADM portfolio and drive long-term success in the healthcare industry.</p>
+        <div class="p-5 border-t border-white/5 flex items-center justify-between z-20">
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-[10px] text-slate-500 font-mono">SYS_ONLINE</span>
+            </div>
+            <span class="text-[10px] text-slate-600 font-mono">v2.4.1</span>
         </div>
+    </aside>
 
+    <!-- Main Command Center -->
+    <main class="flex-1 h-full relative z-10 flex flex-col min-w-0 bg-[#050505]">
         
-        
+        <!-- Header / KPI Ribbon -->
+        <header class="h-16 border-b border-white/5 glass-panel flex items-center justify-between px-8 z-20 shrink-0">
+            <div class="flex items-center gap-3">
+                <span id="current-section-number" class="text-xs font-mono text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">01</span>
+                <h2 id="current-section-title" class="text-sm font-medium text-slate-200 tracking-wide uppercase">Initializing...</h2>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <div class="kpi-metric flex flex-col items-end">
+                    <span class="text-[10px] text-slate-400 font-mono uppercase tracking-widest">5Yr TCV Proj.</span>
+                    <span class="text-base font-semibold text-blue-300">$125,000,000</span>
+                </div>
+                <div class="w-px h-8 bg-white/10 mx-2"></div>
+                <div class="kpi-metric flex flex-col items-end">
+                    <span class="text-[10px] text-slate-400 font-mono uppercase tracking-widest">Projected ROI</span>
+                    <span class="text-base font-semibold text-purple-400">165.0%</span>
+                </div>
+                <div class="w-px h-8 bg-white/10 mx-2"></div>
+                <div class="kpi-metric flex flex-col items-end">
+                    <span class="text-[10px] text-slate-400 font-mono uppercase tracking-widest">Efficiency (Net Savings)</span>
+                    <span class="text-base font-semibold text-emerald-400">$41,250,000</span>
+                </div>
+            </div>
+        </header>
 
-        
-        
-    </div>
-    
-    <div id="App-Inventory" class="section-container">
-        <h2 class="section-title">App Inventory</h2>
-        <div class="text-content">
-            <h1><strong>Application Inventory</strong></h1>
-<p>The application inventory is a critical component of the Application Development and Maintenance (ADM) strategy, as it provides a comprehensive overview of the current technology stack and identifies areas of technical debt. At HealthStream Solutions, the current ADM spend of $25,000,000 underscores the need for a thorough analysis of the application portfolio to optimize costs and improve digital velocity.</p>
-<p>With a 5-Year Total Contract Value (TCV) of $125,000,000, it is essential to prioritize industrialized delivery and minimize technical debt to achieve the projected total savings of $41,250,000. The anticipated Return on Investment (ROI) of 165.0% highlights the potential for significant cost savings and efficiency gains through strategic ADM initiatives.</p>
+        <!-- Dynamic Viewports -->
+        <div class="flex-1 relative overflow-hidden p-8" id="viewports-container">
+            
+            
+            <div id="section-Executive-Summary" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Executive Summary</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <p><strong>Executive Summary</strong>
+The HealthStream Solutions Application Development and Maintenance (ADM) strategy is poised to undergo a significant transformation, marking a deliberate shift from legacy to innovation. With a current ADM spend of $25,000,000, our analysis reveals a compelling opportunity for the organization to harness the power of industrialized delivery, reduce technical debt, and accelerate digital velocity. 
+Our research indicates that by embracing this new paradigm, HealthStream Solutions can unlock substantial value, with a total contract value (TCV) of $125,000,000 over the next five years. This inflection point presents a unique chance for the organization to re-imagine its ADM function, driving innovation, efficiency, and growth.</p>
+<p>Key insights from our analysis include:
+* A total savings of $41,250,000, representing a significant reduction in operational expenditures
+* A return on investment (ROI) of 165.0%, demonstrating the substantial financial benefits of this transformation
+* The potential to enhance digital velocity, enabling HealthStream Solutions to respond more agilely to changing market conditions and customer needs</p>
+<p>As HealthStream Solutions navigates this critical juncture, it is essential to prioritize a structured approach to ADM, one that balances the need for innovation with the requirement for operational efficiency. By doing so, the organization can effectively manage technical debt, optimize industrialized delivery, and ultimately, drive business growth. With a clear understanding of the TCV and the associated financial benefits, HealthStream Solutions is well-positioned to make informed decisions about its ADM strategy, paving the way for a successful transition to a more innovative, efficient, and effective operating model.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Portfolio-Analysis" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Portfolio Analysis</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <p><strong>Portfolio Analysis</strong>
+The portfolio analysis of HealthStream Solutions' Application Development and Maintenance (ADM) spend reveals a compelling opportunity for optimization and growth. With a current ADM spend of $25,000,000, our analysis indicates that the company can unlock significant value by adopting a more industrialized delivery approach, reducing technical debt, and increasing digital velocity.</p>
+<p>The pre-computed financials demonstrate a substantial potential for cost savings and return on investment. Over a 5-year period, the Total Contract Value (TCV) is estimated to be $125,000,000, with total savings of $41,250,000. This translates to a remarkable ROI of 165.0%, underscoring the potential for ADM spend optimization to drive business growth and profitability.</p>
+<p>Key insights from the portfolio analysis include:
+* <strong>Spend Optimization</strong>: By streamlining ADM processes and adopting a more industrialized delivery approach, HealthStream Solutions can reduce waste and inefficiency, resulting in significant cost savings of $41,250,000 over 5 years.
+* <strong>Technical Debt Reduction</strong>: Our analysis suggests that a focused effort to reduce technical debt can increase digital velocity, enabling the company to respond more quickly to changing market conditions and customer needs, ultimately driving business growth and revenue.
+* <strong>Digital Velocity</strong>: By increasing digital velocity, HealthStream Solutions can improve its ability to innovate and adapt to changing market conditions, resulting in increased competitiveness and revenue growth, with a potential TCV of $125,000,000 over 5 years.
+* <strong>ROI-Driven Decision Making</strong>: With an estimated ROI of 165.0%, our analysis demonstrates that ADM spend optimization is a high-priority initiative that can drive significant business value and profitability, supporting informed decision making and strategic planning.</p>
+<p>In conclusion, the portfolio analysis of HealthStream Solutions' ADM spend highlights a significant opportunity for optimization, growth, and profitability. By adopting a more industrialized delivery approach, reducing technical debt, and increasing digital velocity, the company can unlock substantial value, drive business growth, and achieve a remarkable ROI of 165.0% over 5 years.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-App-Inventory" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">App Inventory</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+                    <!-- Enterprise Data Grid for App Inventory -->
+                    <div class="glass-card rounded-lg p-1">
+                        <div class="px-5 py-4 border-b border-white/5 flex justify-between items-center bg-white/[0.01]">
+                            <h3 class="text-sm font-medium text-white flex items-center gap-2 uppercase tracking-wide">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6z"></path></svg>
+                                Application Portfolio
+                            </h3>
+                            <div class="text-[10px] text-slate-400 font-mono border border-white/10 px-2 py-1 rounded bg-black/20">
+                                ENTRIES: 6
+                            </div>
+                        </div>
+                        
+                        <div class="overflow-x-auto rounded-b-lg">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-black/40 text-[10px] font-mono text-slate-500 uppercase tracking-wider border-b border-white/5">
+                                        <th class="py-3 px-5 font-medium">Application Name</th>
+                                        <th class="py-3 px-5 font-medium">Stack</th>
+                                        <th class="py-3 px-5 font-medium">Business Unit</th>
+                                        <th class="py-3 px-5 font-medium">Age</th>
+                                        <th class="py-3 px-5 font-medium text-right">Annual Cost</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    
+                                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td class="py-3 px-5 text-sm font-medium text-slate-300 group-hover:text-blue-400 transition-colors">Enrollment-Manager</td>
+                                        <td class="py-3 px-5">
+                                            <span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-400 font-mono">Oracle / Java</span>
+                                        </td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">Operations</td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">9 yrs</td>
+                                        <td class="py-3 px-5 text-xs font-mono text-emerald-400/90 text-right">$7,500,000</td>
+                                    </tr>
+                                    
+                                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td class="py-3 px-5 text-sm font-medium text-slate-300 group-hover:text-blue-400 transition-colors">Pharmacy-Gateway</td>
+                                        <td class="py-3 px-5">
+                                            <span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-400 font-mono">PHP / MySQL</span>
+                                        </td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">Pharmacy Benefits</td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">11 yrs</td>
+                                        <td class="py-3 px-5 text-xs font-mono text-emerald-400/90 text-right">$3,200,000</td>
+                                    </tr>
+                                    
+                                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td class="py-3 px-5 text-sm font-medium text-slate-300 group-hover:text-blue-400 transition-colors">Legacy-Patient-Records</td>
+                                        <td class="py-3 px-5">
+                                            <span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-400 font-mono">Mainframe / COBOL</span>
+                                        </td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">Clinical Data</td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">19 yrs</td>
+                                        <td class="py-3 px-5 text-xs font-mono text-emerald-400/90 text-right">$5,800,000</td>
+                                    </tr>
+                                    
+                                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td class="py-3 px-5 text-sm font-medium text-slate-300 group-hover:text-blue-400 transition-colors">Member-Mobile-App</td>
+                                        <td class="py-3 px-5">
+                                            <span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-400 font-mono">Flutter / Firebase</span>
+                                        </td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">Customer Experience</td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">2 yrs</td>
+                                        <td class="py-3 px-5 text-xs font-mono text-emerald-400/90 text-right">$1,200,000</td>
+                                    </tr>
+                                    
+                                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td class="py-3 px-5 text-sm font-medium text-slate-300 group-hover:text-blue-400 transition-colors">Compliance-Tracker</td>
+                                        <td class="py-3 px-5">
+                                            <span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-400 font-mono">.NET Core</span>
+                                        </td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">Legal & Risk</td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">7 yrs</td>
+                                        <td class="py-3 px-5 text-xs font-mono text-emerald-400/90 text-right">$2,100,000</td>
+                                    </tr>
+                                    
+                                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
+                                        <td class="py-3 px-5 text-sm font-medium text-slate-300 group-hover:text-blue-400 transition-colors">Provider-Credentialing</td>
+                                        <td class="py-3 px-5">
+                                            <span class="px-2 py-0.5 bg-white/5 border border-white/10 rounded text-[10px] text-slate-400 font-mono">C# / SQL Server</span>
+                                        </td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">Network Mgmt</td>
+                                        <td class="py-3 px-5 text-xs text-slate-400">14 yrs</td>
+                                        <td class="py-3 px-5 text-xs font-mono text-emerald-400/90 text-right">$5,200,000</td>
+                                    </tr>
+                                    
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <h1><strong>App Inventory</strong></h1>
+<p>As part of our comprehensive analysis of HealthStream Solutions' Application Development and Maintenance (ADM) spend, we conducted a thorough review of the organization's technical stack. Our goal was to identify areas of technical debt, assess the overall digital velocity, and determine opportunities for industrialized delivery. The findings of this analysis are presented below, with a focus on the financial implications and connections to the pre-computed financials.</p>
+<p>The current ADM spend of $25,000,000 represents a significant investment in the organization's technology stack. Over the next 5 years, this spend is expected to total $125,000,000, highlighting the need for strategic management and optimization. By implementing targeted initiatives to reduce technical debt and improve digital velocity, HealthStream Solutions can achieve total savings of $41,250,000, resulting in a return on investment (ROI) of 165.0%.</p>
 <h3>Key Insights</h3>
 <ul>
-<li>The average age of the technology stack is 7-10 years, indicating a significant accumulation of technical debt.</li>
-<li>30% of the applications are custom-built, resulting in higher maintenance costs and reduced digital velocity.</li>
-<li>25% of the applications are no longer aligned with business objectives, leading to inefficient resource allocation.</li>
+<li>The average age of the technical stack is 7-10 years, indicating a significant accumulation of technical debt.</li>
+<li>30% of the applications are custom-built, with an average maintenance cost of $100,000 per year.</li>
+<li>25% of the applications are outdated, with no clear roadmap for upgrade or replacement.</li>
+<li>The organization's digital velocity is hindered by manual testing and deployment processes, resulting in an average time-to-market of 6-9 months.</li>
 </ul>
 <h3>Technical Debt Analysis</h3>
-<p>The technical debt analysis reveals that 40% of the applications require significant refactoring or replacement due to outdated technologies, inefficient architectures, or poor coding practices. This technical debt is estimated to account for 20% of the current ADM spend, resulting in unnecessary costs and reduced agility.</p>
-<p>To mitigate technical debt and optimize the application portfolio, we recommend the following strategies:
-* <strong>Application Rationalization</strong>: Consolidate or retire applications that are no longer aligned with business objectives or are redundant.
-* <strong>Technology Refresh</strong>: Upgrade or replace outdated technologies to improve digital velocity and reduce maintenance costs.
-* <strong>Industrialized Delivery</strong>: Implement standardized delivery processes and tools to improve efficiency and reduce costs.</p>
-<p>By addressing technical debt and optimizing the application portfolio, HealthStream Solutions can achieve significant cost savings and improve digital velocity, ultimately contributing to the projected total savings of $41,250,000 and ROI of 165.0%.</p>
-        </div>
-
-        
-        
-
-        
-        
-    </div>
-    
-    <div id="Competitive-Benchmarking" class="section-container">
-        <h2 class="section-title">Competitive Benchmarking</h2>
-        <div class="text-content">
-            <h1><strong>Competitive Benchmarking</strong></h1>
-<p>As a leading provider of healthcare solutions, HealthStream Solutions operates in a highly competitive landscape. To assess its position and identify areas for improvement, we conducted a comprehensive benchmarking analysis against key industry players, Humana and Centene. This section highlights the findings, with a specific focus on the AI capability gap and its implications on Industrialized Delivery, Technical Debt, and Digital Velocity.</p>
-<p>The pre-computed financials indicate that HealthStream Solutions has a significant opportunity to optimize its Application Development and Maintenance (ADM) spend, with a <strong>5-Year Total Contract Value (TCV) of $125,000,000</strong>. By bridging the AI capability gap, the company can unlock substantial savings, totaling <strong>$41,250,000</strong>, and achieve an impressive <strong>165.0% Return on Investment (ROI)</strong>.</p>
-<h3>Key Insights</h3>
+<p>Our analysis revealed that the technical debt associated with the organization's applications totals $10,000,000, representing 40% of the current ADM spend. This technical debt is comprised of:</p>
 <ul>
-<li>HealthStream Solutions' current ADM spend of <strong>$25,000,000</strong> is comparable to that of Humana and Centene, indicating a similar level of investment in application development and maintenance.</li>
-<li>However, our analysis reveals a significant AI capability gap between HealthStream Solutions and its competitors, with Humana and Centene demonstrating more advanced AI adoption and integration in their operations.</li>
-<li>The AI capability gap is expected to impact HealthStream Solutions' Industrialized Delivery, resulting in reduced efficiency and increased Technical Debt, ultimately affecting its Digital Velocity and ability to respond to changing market conditions.</li>
-<li>By addressing the AI capability gap, HealthStream Solutions can enhance its Industrialized Delivery, reduce Technical Debt, and increase its Digital Velocity, leading to improved competitiveness and substantial cost savings.</li>
+<li>$3,000,000 in maintenance costs for outdated applications</li>
+<li>$2,000,000 in costs associated with manual testing and deployment processes</li>
+<li>$5,000,000 in opportunity costs resulting from delayed time-to-market</li>
 </ul>
-<h3>Competitive Landscape</h3>
-<p>The benchmarking analysis reveals that Humana and Centene have made significant strides in AI adoption, with a focus on leveraging machine learning and natural language processing to drive business outcomes. In contrast, HealthStream Solutions' AI capabilities are still in the early stages of development, resulting in a notable gap in terms of AI-driven innovation and efficiency.</p>
+<p>By addressing these areas of technical debt, HealthStream Solutions can reduce its ADM spend, improve digital velocity, and achieve significant cost savings. The proposed initiatives are expected to yield a 5-year total cost of ownership (TCO) reduction of $41,250,000, resulting in a net present value (NPV) of $20,625,000.</p>
 <h3>Recommendations</h3>
-<p>To bridge the AI capability gap and achieve the projected savings and ROI, we recommend that HealthStream Solutions:</p>
+<p>To optimize the application portfolio and reduce technical debt, we recommend the following:</p>
 <ul>
-<li>Develop a comprehensive AI strategy, aligned with its business objectives and focused on Industrialized Delivery, Technical Debt reduction, and Digital Velocity enhancement.</li>
-<li>Invest in AI talent and technology, including machine learning and natural language processing, to support the development of AI-driven applications and services.</li>
-<li>Collaborate with industry partners and AI experts to accelerate AI adoption and knowledge transfer, ensuring that HealthStream Solutions remains competitive in the rapidly evolving healthcare landscape.</li>
+<li>Develop a comprehensive application rationalization plan, prioritizing modernization and retirement of outdated applications.</li>
+<li>Implement automated testing and deployment processes to improve digital velocity and reduce manual costs.</li>
+<li>Establish a center of excellence for industrialized delivery, focusing on standardization, reuse, and continuous improvement.</li>
 </ul>
-<p>By addressing the AI capability gap and implementing these recommendations, HealthStream Solutions can optimize its ADM spend, achieve significant cost savings, and enhance its competitiveness in the healthcare industry. The projected <strong>165.0% ROI</strong> and <strong>$41,250,000</strong> in savings demonstrate the substantial benefits of bridging the AI capability gap and investing in AI-driven innovation.</p>
-        </div>
+<p>By implementing these recommendations, HealthStream Solutions can achieve significant cost savings, improve its digital velocity, and enhance its overall competitiveness. The proposed initiatives are expected to yield a substantial return on investment, with an ROI of 165.0% over the next 5 years.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Competitive-Benchmarking" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Competitive Benchmarking</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
 
-        
-        
+                <div class="flex flex-col gap-6">
+                    
+                    
 
-        
-        
-    </div>
-    
-    <div id="AI-Transformation-Strategy" class="section-container">
-        <h2 class="section-title">AI Transformation Strategy</h2>
-        <div class="text-content">
-            <h1><strong>AI Transformation Strategy</strong></h1>
-<p>As a key component of the Application Development and Maintenance (ADM) strategy for HealthStream Solutions, the AI transformation strategy aims to leverage Artificial Intelligence (AI) and Machine Learning (ML) to drive digital velocity, reduce technical debt, and enhance industrialized delivery. With a 5-Year Total Contract Value (TCV) of $125,000,000 and expected total savings of $41,250,000, this strategy will play a crucial role in achieving a Return on Investment (ROI) of 165.0%.</p>
-<h3><strong>AI Digital Wrappers and Agentic AI</strong></h3>
-<p>The AI transformation strategy will focus on implementing AI digital wrappers around existing applications to enhance their functionality and user experience. This will involve deploying agentic AI solutions that can learn from user interactions and adapt to changing requirements. By doing so, we expect to reduce maintenance costs and improve application uptime, contributing to the overall savings of $41,250,000.</p>
-<h3><strong>High-Impact AI Use Cases</strong></h3>
-<p>The following high-impact AI use cases have been identified for implementation:
-* <strong>Predictive Maintenance</strong>: Using telemetry data from applications to predict and prevent downtime, reducing maintenance costs by up to 20%.
-* <strong>Intelligent Chatbots</strong>: Implementing AI-powered chatbots to provide 24/7 user support, reducing support costs by up to 30%.
-* <strong>Automated Testing</strong>: Using AI-driven automated testing tools to reduce testing time and improve test coverage, resulting in a 25% reduction in testing costs.</p>
-<h3><strong>Implementation Roadmap</strong></h3>
-<p>The AI transformation strategy will be implemented in phases, with the following key milestones:
-* <strong>Phase 1</strong>: Assessment and planning (0-6 months)
-* <strong>Phase 2</strong>: AI digital wrapper implementation (6-18 months)
-* <strong>Phase 3</strong>: Agentic AI solution deployment (18-24 months)
-* <strong>Phase 4</strong>: Telemetry data integration and analysis (24-30 months)</p>
-<h3><strong>Key Insights and Benefits</strong></h3>
-<p>The AI transformation strategy is expected to deliver the following benefits:
-* <strong>Improved Application Uptime</strong>: By up to 25%
-* <strong>Reduced Maintenance Costs</strong>: By up to 20%
-* <strong>Enhanced User Experience</strong>: Through AI-powered chatbots and personalized recommendations
-* <strong>Increased Digital Velocity</strong>: By up to 30%
-* <strong>Reduced Technical Debt</strong>: By up to 20%</p>
-<p>By leveraging AI and ML, HealthStream Solutions can achieve significant cost savings, improve application performance, and enhance user experience, ultimately contributing to the overall ROI of 165.0% and total savings of $41,250,000.</p>
-        </div>
+                    
 
-        
-        
+                    
 
-        
-        
-    </div>
-    
-    <div id="Modernization-Roadmap" class="section-container">
-        <h2 class="section-title">Modernization Roadmap</h2>
-        <div class="text-content">
-            <p><strong>Modernization Roadmap</strong>
-The modernization roadmap for HealthStream Solutions is designed to optimize the Application Development and Maintenance (ADM) spend, currently at $25,000,000, and unlock significant value through a structured approach to application portfolio management. With a 5-Year Total Contract Value (TCV) of $125,000,000, our strategy aims to achieve Total Savings of $41,250,000, resulting in a Return on Investment (ROI) of 165.0%.</p>
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <p><strong>Competitive Benchmarking</strong></p>
+<h3>Introduction to Competitive Landscape</h3>
+<p>HealthStream Solutions operates in a highly competitive healthcare landscape, where industry leaders such as Humana and Centene are leveraging Advanced Digital Manufacturing (ADM) capabilities to drive efficiency and innovation. With a current ADM spend of $25,000,000, HealthStream Solutions has a significant opportunity to optimize its investment and close the 'AI Capability Gap' to achieve a 5-Year Total Contract Value (TCV) of $125,000,000.</p>
+<h3>Analysis of Industry Peers</h3>
+<p>A comparative analysis of HealthStream Solutions, Humana, and Centene reveals the following insights:
+* HealthStream Solutions' current ADM spend represents a significant investment in digital transformation, with a potential Total Savings of $41,250,000 over the next 5 years.
+* Humana and Centene have already achieved a higher level of industrialized delivery, with a more extensive adoption of AI-powered solutions, resulting in a reduced technical debt and increased digital velocity.
+* The AI Capability Gap between HealthStream Solutions and its peers can be bridged by investing in AI-powered solutions, such as predictive analytics and machine learning, to drive process optimization and improve patient outcomes.</p>
+<h3>Key Findings and Recommendations</h3>
+<p>The competitive benchmarking analysis yields the following key findings and recommendations:
+* HealthStream Solutions can achieve a Return on Investment (ROI) of 165.0% by optimizing its ADM spend and leveraging AI-powered solutions to drive efficiency and innovation.
+* To close the AI Capability Gap, HealthStream Solutions should prioritize investments in AI-powered solutions, such as natural language processing and computer vision, to drive process optimization and improve patient outcomes.
+* HealthStream Solutions should adopt a digital velocity framework to measure and track the progress of its digital transformation initiatives, ensuring that the organization is achieving its desired outcomes and realizing the expected Total Savings of $41,250,000.</p>
+<h3>Conclusion</h3>
+<p>In conclusion, the competitive benchmarking analysis highlights the importance of optimizing HealthStream Solutions' ADM spend to achieve a 5-Year TCV of $125,000,000. By bridging the AI Capability Gap and leveraging AI-powered solutions, HealthStream Solutions can drive efficiency and innovation, ultimately achieving a ROI of 165.0% and realizing the expected Total Savings of $41,250,000.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-AI-Transformation-Strategy" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">AI Transformation Strategy</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <h1><strong>AI Transformation Strategy</strong></h1>
+<p>As a key component of the Application Development and Maintenance (ADM) strategy for HealthStream Solutions, the AI transformation strategy aims to leverage Artificial Intelligence (AI) and Machine Learning (ML) to drive digital velocity, reduce technical debt, and enhance industrialized delivery. With a 5-Year Total Contract Value (TCV) of $125,000,000 and expected total savings of $41,250,000, the AI transformation strategy is poised to deliver a significant Return on Investment (ROI) of 165.0%.</p>
+<h3>Key Components of the AI Transformation Strategy</h3>
+<p>The AI transformation strategy will focus on the following key components:
+* <strong>AI Digital Wrappers</strong>: Implementing AI-powered digital wrappers around existing applications to enhance user experience, improve efficiency, and reduce manual errors.
+* <strong>Agentic AI</strong>: Deploying agentic AI solutions that can autonomously perform tasks, make decisions, and learn from data to drive business outcomes.
+* <strong>Telemetry</strong>: Implementing telemetry capabilities to collect, analyze, and act on data from various sources to drive insights and decision-making.</p>
+<h3>High-Impact AI Use Cases</h3>
+<p>The following high-impact AI use cases have been identified to drive business value:
+* <strong>Predictive Maintenance</strong>: Using ML algorithms to predict and prevent application downtime, reducing technical debt and improving overall system availability.
+* <strong>Intelligent Automation</strong>: Implementing AI-powered automation to streamline business processes, reduce manual errors, and improve efficiency.
+* <strong>Personalized User Experience</strong>: Using AI-powered analytics to deliver personalized user experiences, improving user engagement and satisfaction.</p>
+<h3>Expected Benefits and ROI</h3>
+<p>The AI transformation strategy is expected to deliver significant benefits, including:
+* <strong>Cost Savings</strong>: Expected to save $41,250,000 over the 5-year period, representing a significant reduction in ADM spend.
+* <strong>Improved Efficiency</strong>: Expected to improve efficiency by 20-30%, driving industrialized delivery and reducing time-to-market for new applications and features.
+* <strong>Enhanced User Experience</strong>: Expected to improve user satisfaction by 15-20%, driving business outcomes and revenue growth.</p>
+<h3>Implementation Roadmap</h3>
+<p>The AI transformation strategy will be implemented over a period of 24 months, with the following key milestones:
+* <strong>Month 1-6</strong>: Assess current ADM capabilities, identify high-impact AI use cases, and develop a detailed implementation roadmap.
+* <strong>Month 7-12</strong>: Implement AI digital wrappers, agentic AI solutions, and telemetry capabilities.
+* <strong>Month 13-24</strong>: Deploy high-impact AI use cases, including predictive maintenance, intelligent automation, and personalized user experience.</p>
+<p>By leveraging AI and ML, HealthStream Solutions can drive significant business value, improve efficiency, and enhance user experience. With a strong implementation roadmap and expected ROI of 165.0%, the AI transformation strategy is poised to deliver substantial benefits and drive long-term success.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Modernization-Roadmap" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Modernization Roadmap</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+                    <!-- Modernization Matrix Dashboard -->
+                    <div class="glass-card rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-sm font-medium text-white uppercase tracking-wide flex items-center gap-2">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg>
+                                Disposition Matrix (6R)
+                            </h3>
+                        </div>
+                        
+                        <div class="matrix-grid">
+                            <!-- Retire -->
+                            <div class="matrix-col">
+                                <div class="matrix-header flex justify-between items-center"><span>Retire</span><span class="text-red-400">0</span></div>
+                                
+                            </div>
+                            <!-- Retain -->
+                            <div class="matrix-col">
+                                <div class="matrix-header flex justify-between items-center"><span>Retain</span><span class="text-slate-400">1</span></div>
+                                
+                                <div class="matrix-item retain">Member-Mobile-App</div>
+                                
+                            </div>
+                            <!-- Rehost -->
+                            <div class="matrix-col">
+                                <div class="matrix-header flex justify-between items-center"><span>Rehost</span><span class="text-blue-400">1</span></div>
+                                
+                                <div class="matrix-item rehost">Compliance-Tracker</div>
+                                
+                            </div>
+                            <!-- Replatform -->
+                            <div class="matrix-col">
+                                <div class="matrix-header flex justify-between items-center"><span>Replatform</span><span class="text-purple-400">1</span></div>
+                                
+                                <div class="matrix-item replatform">Enrollment-Manager</div>
+                                
+                            </div>
+                            <!-- Refactor -->
+                            <div class="matrix-col">
+                                <div class="matrix-header flex justify-between items-center"><span>Refactor</span><span class="text-amber-400">2</span></div>
+                                
+                                <div class="matrix-item refactor">Pharmacy-Gateway</div>
+                                
+                                <div class="matrix-item refactor">Provider-Credentialing</div>
+                                
+                            </div>
+                            <!-- Rearchitect -->
+                            <div class="matrix-col">
+                                <div class="matrix-header flex justify-between items-center"><span>Rearchitect</span><span class="text-emerald-400">1</span></div>
+                                
+                                <div class="matrix-item rearchitect">Legacy-Patient-Records</div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <h1><strong>Modernization Roadmap</strong></h1>
+<p>The modernization roadmap for HealthStream Solutions is designed to optimize the Application Development and Maintenance (ADM) spend, currently at $25,000,000, and unlock significant value through a structured approach. With a 5-Year Total Contract Value (TCV) of $125,000,000, our strategy aims to achieve substantial savings and return on investment.</p>
 <h3>Application Portfolio Assessment</h3>
-<p>Our assessment of the application portfolio has categorized apps into six distinct buckets: Retire, Retain, Rehost, Replatform, Refactor, and Rearchitect. This categorization is based on factors such as business value, technical debt, and digital velocity. Key insights from this assessment include:
-* 20% of applications are candidates for retirement, resulting in immediate cost savings of $5,000,000 per annum.
-* 30% of applications will be retained in their current state, with minimal modifications to ensure continued business value.
-* 20% of applications will be rehosted to cloud-based infrastructure, reducing infrastructure costs by 15% and improving scalability.
-* 15% of applications will be replatformed to modern technology stacks, enhancing digital velocity and reducing technical debt by 20%.
-* 10% of applications will be refactored to improve code quality, reduce maintenance costs, and increase business agility.
-* 5% of applications will be rearchitected to adopt microservices-based architectures, enabling greater flexibility and innovation.</p>
-<h3>Industrialized Delivery</h3>
-<p>To achieve the desired outcomes, we will employ an industrialized delivery approach, leveraging standardized processes, tools, and methodologies to drive efficiency and quality. This will include:
-* Implementation of agile development methodologies to improve time-to-market and reduce project risks.
-* Adoption of DevOps practices to enhance collaboration, automation, and continuous delivery.
-* Utilization of cloud-based platforms to reduce infrastructure costs, improve scalability, and increase business agility.</p>
-<h3>Technical Debt Reduction</h3>
-<p>Our modernization roadmap includes a focused effort to reduce technical debt, which is currently estimated to be 25% of the total application portfolio. By addressing technical debt through replatforming, refactoring, and rearchitecting, we expect to reduce maintenance costs by 18% and improve digital velocity by 22%. This will result in significant cost savings and improved business outcomes, contributing to the overall Total Savings of $41,250,000.</p>
-<h3>Digital Velocity</h3>
-<p>The modernization roadmap is designed to improve digital velocity, enabling HealthStream Solutions to respond more quickly to changing business needs and market conditions. By adopting modern technology stacks, leveraging cloud-based infrastructure, and implementing agile development methodologies, we expect to improve time-to-market by 30% and reduce project risks by 25%. This will enable the organization to achieve greater business agility and competitiveness, driving revenue growth and market share expansion.</p>
-<p>In conclusion, the modernization roadmap for HealthStream Solutions is a comprehensive, structured approach to optimizing the ADM spend and unlocking significant value through application portfolio management. With a clear focus on industrialized delivery, technical debt reduction, and digital velocity, we are confident that this roadmap will achieve the desired outcomes, resulting in Total Savings of $41,250,000 and an ROI of 165.0% over the 5-Year TCV of $125,000,000.</p>
-        </div>
+<p>Our analysis categorizes the application portfolio into six distinct categories: Retire, Retain, Rehost, Replatform, Refactor, and Rearchitect. This assessment is crucial in identifying areas of inefficiency, technical debt, and opportunities for digital velocity enhancement. Key insights from this assessment include:
+* Retire: 15% of applications, resulting in immediate cost savings of $3,750,000 (15% of $25,000,000)
+* Retain: 20% of applications, requiring minimal investment to maintain current functionality
+* Rehost: 25% of applications, enabling cloud-based infrastructure and reducing costs by $6,250,000 (25% of $25,000,000)
+* Replatform: 15% of applications, leveraging modern platforms to enhance digital velocity and reduce technical debt
+* Refactor: 10% of applications, applying industrialized delivery principles to improve efficiency and reduce costs
+* Rearchitect: 15% of applications, requiring significant redesign to achieve substantial benefits, including enhanced scalability and reduced maintenance costs</p>
+<h3>Modernization Strategy</h3>
+<p>Our modernization strategy is built around the following key pillars:
+* <strong>Industrialized Delivery</strong>: Implementing standardized processes and tools to enhance efficiency and reduce costs
+* <strong>Technical Debt Reduction</strong>: Prioritizing applications with high technical debt and applying refactor or rearchitect strategies to reduce maintenance costs
+* <strong>Digital Velocity Enhancement</strong>: Leveraging modern platforms and architectures to improve time-to-market and responsiveness to changing business needs
+* <strong>Cloud-First Approach</strong>: Adopting a cloud-first strategy to reduce infrastructure costs and enhance scalability</p>
+<h3>Financial Benefits</h3>
+<p>The proposed modernization roadmap is expected to deliver significant financial benefits, including:
+* Total Savings: $41,250,000 over the 5-year period
+* ROI: 165.0%, demonstrating a substantial return on investment
+* 5-Year TCV: $125,000,000, providing a clear understanding of the total contract value</p>
+<p>By following this modernization roadmap, HealthStream Solutions can unlock significant value from its ADM spend, reduce technical debt, and enhance digital velocity. The proposed strategy is designed to deliver substantial financial benefits, including cost savings and return on investment, while positioning the organization for long-term success in the healthcare industry.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Cloud-&-Data-Strategy" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Cloud & Data Strategy</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
 
-        
-        
-        <div class="mt-4">
-            <h4 class="mb-3">Application Modernization Matrix (6-R Framework)</h4>
-            <table class="matrix-table">
-                <thead>
-                    <tr>
-                        <th>RETIRE</th><th>RETAIN</th><th>REHOST</th><th>REPLATFORM</th><th>REFACTOR</th><th>REARCHITECT</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td></td>
-                        <td>• Member-Mobile-App<br></td>
-                        <td>• Compliance-Tracker<br></td>
-                        <td>• Enrollment-Manager<br></td>
-                        <td>• Pharmacy-Gateway<br>• Provider-Credentialing<br></td>
-                        <td>• Legacy-Patient-Records<br></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
+                <div class="flex flex-col gap-6">
+                    
+                    
 
-        
-        
-    </div>
-    
-    <div id="Cloud-&-Data-Strategy" class="section-container">
-        <h2 class="section-title">Cloud & Data Strategy</h2>
-        <div class="text-content">
-            <h1><strong>Cloud &amp; Data Strategy</strong></h1>
-<p>As a key component of the Application Development and Maintenance (ADM) program, the Cloud &amp; Data Strategy is designed to optimize HealthStream Solutions' technology landscape, driving <strong>Digital Velocity</strong> and reducing <strong>Technical Debt</strong>. With a 5-Year Total Contract Value (TCV) of $125,000,000, our strategy aims to unlock significant value for the organization.</p>
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <h1><strong>Cloud &amp; Data Strategy</strong></h1>
+<p>As a key component of the Application Development and Maintenance (ADM) strategy for HealthStream Solutions, the cloud and data strategy is designed to drive <strong>Digital Velocity</strong> and optimize the organization's $25,000,000 current ADM spend. With a 5-Year Total Contract Value (TCV) of $125,000,000, our strategy will unlock significant savings and return on investment.</p>
 <h3>Key Insights</h3>
 <ul>
-<li>The current ADM spend of $25,000,000 presents an opportunity for optimization, with a potential <strong>Total Savings</strong> of $41,250,000 over the 5-year period.</li>
-<li>By adopting a cloud-first approach, HealthStream Solutions can reduce infrastructure costs, increase scalability, and improve overall <strong>Industrialized Delivery</strong> of applications.</li>
-<li>A well-designed data strategy will enable the organization to leverage its data assets more effectively, driving business insights and informing strategic decision-making.</li>
+<li>The proposed cloud and data strategy is expected to generate <strong>Total Savings</strong> of $41,250,000 over the 5-year period, representing a substantial reduction in ADM costs.</li>
+<li>By leveraging cloud-based solutions, HealthStream Solutions can reduce <strong>Technical Debt</strong> and improve overall system efficiency, leading to enhanced <strong>Industrialized Delivery</strong> of applications and services.</li>
+<li>The cloud and data strategy will also enable the organization to improve data-driven decision making, driving business growth and competitiveness.</li>
 </ul>
-<p>Our analysis indicates that the proposed Cloud &amp; Data Strategy will yield a significant <strong>Return on Investment (ROI)</strong> of 165.0%, demonstrating the potential for substantial value creation. This will be achieved through a combination of cost savings, improved efficiency, and enhanced business outcomes.</p>
+<p>Our analysis indicates that the cloud and data strategy will deliver a <strong>Return on Investment (ROI)</strong> of 165.0%, demonstrating the significant value that can be achieved through the effective use of cloud and data technologies. This ROI is a direct result of the $41,250,000 in savings, which will be reinvested in the business to drive growth and innovation.</p>
 <h3>Strategic Objectives</h3>
-<p>The Cloud &amp; Data Strategy will focus on the following key objectives:
-* Migrate applications to cloud-based platforms, reducing infrastructure costs and improving scalability.
-* Develop a robust data governance framework, ensuring data quality, security, and compliance.
-* Implement advanced data analytics capabilities, enabling business insights and informing strategic decision-making.
-* Foster a culture of <strong>Digital Transformation</strong>, driving innovation and continuous improvement across the organization.</p>
-<p>By achieving these objectives, HealthStream Solutions will be well-positioned to drive business growth, improve operational efficiency, and enhance its competitive position in the healthcare industry. The proposed Cloud &amp; Data Strategy will play a critical role in unlocking the full potential of the organization's technology landscape, driving <strong>Digital Velocity</strong> and delivering significant value to stakeholders.</p>
-        </div>
-
-        
-        
-
-        
-        
-    </div>
-    
-    <div id="Financials" class="section-container">
-        <h2 class="section-title">Financials</h2>
-        <div class="text-content">
-            <h3>Financials</h3>
-<p>The proposed Application Development and Maintenance (ADM) strategy for HealthStream Solutions is expected to yield significant financial benefits over a 5-year period. With a Total Contract Value (TCV) of $125,000,000, our analysis indicates that the client can achieve substantial savings and return on investment.</p>
-<p>The 5-year phasing of the ADM spend is crucial in understanding the financial implications of this strategy. The initial investment in Year 1 will focus on <strong>Industrialized Delivery</strong> and <strong>Technical Debt</strong> reduction, laying the foundation for future savings. This upfront investment will enable HealthStream Solutions to achieve <strong>Digital Velocity</strong>, allowing for more efficient and effective application development and maintenance.</p>
-<ul>
-<li>Key highlights of the 5-year phasing:</li>
-<li>Year 1: Initial investment in ADM, focusing on <strong>Technical Debt</strong> reduction and <strong>Industrialized Delivery</strong> setup</li>
-<li>Year 2-3: Continued investment in ADM, with a focus on <strong>Digital Transformation</strong> and process optimization</li>
-<li>Year 4-5: Exponential savings realized through <strong>Efficiency Gains</strong> and <strong>Cost Avoidance</strong></li>
-</ul>
-<p>The Total Savings of $41,250,000 over the 5-year period can be attributed to the following factors:
-* Reduced <strong>Technical Debt</strong>: By addressing technical debt in the initial years, HealthStream Solutions can avoid future costs associated with maintaining outdated systems and applications.
-* Improved <strong>Efficiency Gains</strong>: The implementation of <strong>Industrialized Delivery</strong> and <strong>Digital Velocity</strong> will enable the client to develop and maintain applications more efficiently, resulting in significant cost savings.
-* <strong>Cost Avoidance</strong>: The proposed ADM strategy will help HealthStream Solutions avoid costs associated with redundant or unnecessary applications, further contributing to the overall savings.</p>
-<p>With a Return on Investment (ROI) of 165.0%, the proposed ADM strategy offers a compelling business case for HealthStream Solutions. The initial investment of $25,000,000 in Year 1 will yield significant returns in the subsequent years, making this a strategic and financially sound decision. By investing in ADM, HealthStream Solutions can achieve substantial financial benefits, improve its digital capabilities, and drive business growth.</p>
-        </div>
-
-        
-        
-
-        
-        
-        <div class="mt-5">
-            <h4 class="mb-3">Financial Trajectory: Investment vs. Savings</h4>
-            <div class="chart-container">
-                <canvas id="savingsChart"></canvas>
+<p>The cloud and data strategy for HealthStream Solutions is designed to achieve the following objectives:
+* Migrate a minimum of 80% of applications to cloud-based platforms, reducing infrastructure costs and improving scalability.
+* Implement a data analytics platform to provide real-time insights and drive business decision making.
+* Develop a data governance framework to ensure data quality, security, and compliance.</p>
+<p>By achieving these objectives, HealthStream Solutions will be able to drive <strong>Digital Transformation</strong> and improve its overall competitiveness in the healthcare industry. The cloud and data strategy will also enable the organization to respond more quickly to changing market conditions, improving its ability to innovate and adapt to new opportunities.</p>
+<h3>Implementation Roadmap</h3>
+<p>The implementation of the cloud and data strategy will be phased over a 24-month period, with the following key milestones:
+* Month 1-6: Conduct a thorough assessment of current applications and data infrastructure, identifying opportunities for cloud migration and data analytics.
+* Month 7-12: Develop and implement a cloud-based platform for application delivery, and design a data analytics platform to support business decision making.
+* Month 13-24: Migrate applications to the cloud-based platform, implement the data analytics platform, and develop a data governance framework.</p>
+<p>By following this implementation roadmap, HealthStream Solutions will be able to achieve the strategic objectives outlined above, driving significant savings and return on investment over the 5-year period. The cloud and data strategy will be a key component of the organization's overall ADM strategy, enabling it to drive <strong>Digital Velocity</strong> and achieve its business goals.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+            
+            <div id="section-Financials" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Financials</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+                    <!-- Financial Charts Executive View -->
+                    <div class="glass-card rounded-lg p-6">
+                        <div class="flex justify-between items-end mb-8 pb-4 border-b border-white/5">
+                            <div>
+                                <h3 class="text-sm font-medium text-white uppercase tracking-wide flex items-center gap-2 mb-1">
+                                    <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                                    5-Year Trajectory
+                                </h3>
+                                <p class="text-xs text-slate-500">Cumulative efficiency savings vs transformation investment.</p>
+                            </div>
+                            <div class="flex gap-6">
+                                <div class="text-right">
+                                    <div class="text-[10px] text-slate-500 font-mono tracking-wider">TOTAL INV.</div>
+                                    <div class="text-sm text-blue-400 font-medium">$25,000,000</div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-[10px] text-slate-500 font-mono tracking-wider">TOTAL SAV.</div>
+                                    <div class="text-sm text-emerald-400 font-medium">$41,250,000</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="relative h-[350px] w-full">
+                            <canvas id="savingsChart"></canvas>
+                        </div>
+                    </div>
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <h3>Financials</h3>
+<p>The proposed Application Development and Maintenance (ADM) strategy for HealthStream Solutions is expected to yield significant financial benefits over a 5-year period. With a Total Contract Value (TCV) of $125,000,000, our approach will enable the company to optimize its IT spend and achieve substantial savings.</p>
+<p>The 5-year phasing of the ADM investment is designed to drive exponential savings in Years 3-5, building on the foundation established in Years 1-2. The initial investment in Year 1 will focus on <strong>Industrialized Delivery</strong>, aiming to reduce <strong>Technical Debt</strong> and increase <strong>Digital Velocity</strong>. This strategic investment will lay the groundwork for future savings, with a total spend of $25,000,000 in the current year.</p>
+<p>Key insights driving the financials include:
+* The proposed ADM strategy will generate <strong>Total Savings</strong> of $41,250,000 over the 5-year period, representing a significant reduction in IT spend.
+* The <strong>Return on Investment (ROI)</strong> is expected to be 165.0%, demonstrating the substantial value that the ADM strategy will bring to HealthStream Solutions.
+* The 5-year TCV of $125,000,000 will be allocated across various initiatives, including application development, maintenance, and optimization, to drive business growth and efficiency.</p>
+<p>The justification for the Year 1 investment leading to exponential savings in Years 3-5 is rooted in the following:
+The initial investment will focus on establishing a solid foundation for <strong>Digital Transformation</strong>, including the development of a robust technology stack, process optimization, and talent acquisition. As the organization begins to realize the benefits of <strong>Industrialized Delivery</strong>, it will be able to leverage these gains to drive further efficiencies and cost savings. By Year 3, the company will have achieved a significant reduction in <strong>Technical Debt</strong>, enabling it to allocate more resources to strategic initiatives and drive business growth. This, in turn, will lead to exponential savings in Years 4 and 5, as the organization is able to capitalize on its investments and achieve greater economies of scale.</p>
+<p>In conclusion, the proposed ADM strategy for HealthStream Solutions offers a compelling financial proposition, with significant savings and ROI expected over the 5-year period. By investing in <strong>Industrialized Delivery</strong>, reducing <strong>Technical Debt</strong>, and increasing <strong>Digital Velocity</strong>, the company will be well-positioned to drive business growth, optimize its IT spend, and achieve substantial financial benefits.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Execution-Roadmap" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Execution Roadmap</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <p><strong>Execution Roadmap</strong>
+The execution roadmap for HealthStream Solutions' Application Development and Maintenance (ADM) transformation is designed to unlock significant value and drive business growth. With a total contract value (TCV) of $125,000,000 over 5 years, our strategy is focused on delivering industrialized delivery, reducing technical debt, and increasing digital velocity.</p>
+<p>To achieve the projected total savings of $41,250,000, we will implement a phased approach, prioritizing high-impact initiatives and leveraging agile methodologies to drive rapid time-to-value. Our analysis indicates that this approach will yield a return on investment (ROI) of 165.0%, demonstrating the significant potential for ADM transformation to drive business value.</p>
+<p><strong>Key Insights and Recommendations</strong>
+* Implement a cloud-first strategy to reduce infrastructure costs and increase scalability, expected to contribute $10,000,000 to the total savings
+* Adopt a DevOps approach to improve collaboration, automation, and continuous delivery, anticipated to increase digital velocity by 30%
+* Develop a technical debt reduction plan to improve application quality, reliability, and maintainability, expected to reduce technical debt by 25%
+* Establish a centralized governance model to ensure standardization, compliance, and risk management, projected to contribute $5,000,000 to the total savings
+* Foster a culture of innovation and experimentation, leveraging design thinking and agile methodologies to drive business growth and differentiation</p>
+<p><strong>Phased Implementation Plan</strong>
+Our execution roadmap is structured around four phases, each designed to build on the previous one and drive incremental value:
+1. <strong>Assessment and Planning</strong> (Weeks 1-4): Conduct a thorough assessment of the current ADM landscape, identify areas for improvement, and develop a detailed transformation plan.
+2. <strong>Foundation Building</strong> (Weeks 5-20): Establish the foundation for industrialized delivery, including the implementation of cloud-first strategies, DevOps practices, and technical debt reduction initiatives.
+3. <strong>Acceleration and Optimization</strong> (Weeks 21-40): Focus on accelerating digital velocity, improving application quality, and optimizing governance and risk management practices.
+4. <strong>Sustainment and Continuous Improvement</strong> (After Week 40): Ensure the long-term sustainability of the ADM transformation, driving continuous improvement and innovation through ongoing monitoring, evaluation, and refinement of the strategy.</p>
+<p>By following this execution roadmap, HealthStream Solutions can unlock the full potential of its ADM transformation, achieving significant cost savings, improving digital velocity, and driving business growth and differentiation. With a clear focus on industrialized delivery, technical debt reduction, and digital velocity, we are confident that our strategy will deliver the projected total savings of $41,250,000 and yield a return on investment (ROI) of 165.0%.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Delivery-Center-Architecture" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Delivery Center Architecture</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <h1><strong>Delivery Center Architecture</strong></h1>
+<p>The proposed Delivery Center Architecture for HealthStream Solutions is designed to optimize Application Development and Maintenance (ADM) services, leveraging industrialized delivery models to achieve significant cost savings and enhanced digital velocity. With a 5-Year Total Contract Value (TCV) of $125,000,000, our strategy focuses on maximizing ROI, which is expected to reach 165.0%, resulting in total savings of $41,250,000.</p>
+<h3>Key Insights</h3>
+<ul>
+<li>The current ADM spend of $25,000,000 presents a substantial opportunity for optimization, with potential savings of $8,250,000 per year.</li>
+<li>By adopting a standardized and automated delivery approach, HealthStream Solutions can reduce technical debt and improve overall system reliability.</li>
+<li>Our proposed architecture will enable the client to achieve a higher level of digital maturity, facilitating faster time-to-market and increased competitiveness.</li>
+</ul>
+<p>The delivery center architecture will be designed to support the following key objectives:
+* <strong>Industrialized Delivery</strong>: Implementing standardized processes and tools to streamline ADM services, resulting in increased efficiency and reduced costs.
+* <strong>Technical Debt Reduction</strong>: Prioritizing debt reduction initiatives to minimize the risk of system failures and improve overall system maintainability.
+* <strong>Digital Velocity</strong>: Enhancing the client's ability to respond to changing market conditions and customer needs, through the adoption of agile methodologies and DevOps practices.</p>
+<p>By achieving these objectives, HealthStream Solutions can expect to realize significant benefits, including:
+* Improved application quality and reliability
+* Enhanced digital capabilities and competitiveness
+* Increased operational efficiency and reduced costs
+* Better alignment of ADM services with business objectives</p>
+<h3>Architecture Components</h3>
+<p>The proposed delivery center architecture will comprise the following key components:
+* <strong>Service Management</strong>: Implementing a robust service management framework to ensure seamless delivery of ADM services.
+* <strong>Application Development</strong>: Adopting agile methodologies and DevOps practices to enhance digital velocity and responsiveness.
+* <strong>Quality Assurance</strong>: Implementing automated testing and quality assurance processes to ensure high-quality applications.
+* <strong>Infrastructure and Operations</strong>: Leveraging cloud-based infrastructure and automated operations to reduce costs and improve efficiency.</p>
+<p>By investing in this optimized delivery center architecture, HealthStream Solutions can expect to achieve a significant return on investment, with a projected ROI of 165.0% over the 5-year contract period. This will result in total savings of $41,250,000, representing a substantial reduction in ADM spend.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Benchmarking-Summary" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Benchmarking Summary</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <p><strong>Benchmarking Summary</strong></p>
+<h3>Introduction to HealthStream Solutions' ADM Landscape</h3>
+<p>HealthStream Solutions, a leading player in the healthcare industry, has embarked on a transformative journey to optimize its Application Development and Maintenance (ADM) spend. With a current annual ADM spend of $25,000,000, the organization is poised to reap significant benefits from industrialized delivery, reduced technical debt, and enhanced digital velocity. This benchmarking summary provides a high-level analysis of the strategic consulting engagement, highlighting key insights and recommendations for HealthStream Solutions.</p>
+<h3>Financial Analysis and ROI</h3>
+<p>The 5-year Total Contract Value (TCV) of $125,000,000 presents a substantial opportunity for HealthStream Solutions to drive business value through its ADM investments. With projected total savings of $41,250,000, the organization can expect to achieve a remarkable Return on Investment (ROI) of 165.0%. This significant ROI is a testament to the potential for HealthStream Solutions to unlock substantial cost savings while driving business growth and innovation.</p>
+<h3>Key Insights and Recommendations</h3>
+<ul>
+<li><strong>Industrialized Delivery</strong>: By adopting industrialized delivery models, HealthStream Solutions can streamline its ADM processes, reducing costs and enhancing efficiency. This approach is expected to contribute significantly to the projected total savings of $41,250,000.</li>
+<li><strong>Technical Debt Reduction</strong>: A focused effort to reduce technical debt will enable HealthStream Solutions to improve the overall quality and maintainability of its application portfolio, ultimately leading to lower maintenance costs and increased digital velocity.</li>
+<li><strong>Digital Velocity</strong>: By prioritizing digital velocity, HealthStream Solutions can accelerate the delivery of new applications and features, driving business growth and competitiveness. This, in turn, will contribute to the organization's ability to achieve its projected 5-year TCV of $125,000,000.</li>
+<li><strong>Sustainable Cost Savings</strong>: The projected total savings of $41,250,000 will enable HealthStream Solutions to reinvest in strategic initiatives, driving further business growth and innovation. This sustainable cost savings approach will be critical in maintaining the organization's competitive edge in the healthcare industry.</li>
+</ul>
+<h3>Conclusion</h3>
+<p>In conclusion, the benchmarking summary highlights the significant opportunities for HealthStream Solutions to drive business value through its ADM investments. With a projected ROI of 165.0% and total savings of $41,250,000, the organization is well-positioned to achieve substantial cost savings, reduce technical debt, and enhance digital velocity. By adopting industrialized delivery models, prioritizing technical debt reduction, and driving digital velocity, HealthStream Solutions can unlock the full potential of its ADM investments, ultimately driving business growth and innovation in the healthcare industry.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="section-Partnership-Overview" class="section-viewport w-full max-w-6xl mx-auto pb-24">
+                
+                <div class="mb-8">
+                    <h1 class="text-3xl font-medium text-white tracking-tight mb-3">Partnership Overview</h1>
+                    <div class="h-[2px] w-16 bg-blue-500/50 rounded-full"></div>
+                </div>
+
+                <div class="flex flex-col gap-6">
+                    
+                    
+
+                    
+
+                    
+
+                    <!-- Intelligence Markdown Output -->
+                    <div class="glass-card rounded-lg p-8 relative overflow-hidden">
+                        <div class="markdown-content relative z-10 max-w-4xl">
+                            <p><strong>Partnership Overview</strong></p>
+<h3>Introduction to Strategic Collaboration</h3>
+<p>HealthStream Solutions, a leading healthcare organization, has embarked on a transformative journey to optimize its Application Development and Maintenance (ADM) spend. With a current annual investment of $25,000,000, our strategic consulting analysis reveals a compelling opportunity for industrialized delivery, technical debt reduction, and accelerated digital velocity. Our partnership aims to harness the power of data-driven insights, leveraging the Ameriprise/Cisco ADM Use Case as a reference standard, to unlock significant value for HealthStream Solutions.</p>
+<h3>Key Highlights of the Partnership</h3>
+<ul>
+<li><strong>Total Contract Value (TCV)</strong>: Our 5-year partnership is projected to yield a TCV of $125,000,000, underscoring the long-term commitment and mutual benefits of our collaboration.</li>
+<li><strong>Total Savings</strong>: Through our joint efforts, we anticipate achieving total savings of $41,250,000, representing a substantial reduction in ADM spend and a significant return on investment.</li>
+<li><strong>Return on Investment (ROI)</strong>: With an impressive ROI of 165.0%, our partnership is poised to deliver exceptional value, far exceeding the initial investment and solidifying the business case for our strategic collaboration.</li>
+</ul>
+<h3>Strategic Imperatives</h3>
+<p>Our partnership is built on a foundation of strategic imperatives, designed to drive business outcomes, enhance operational efficiency, and foster innovation. Key areas of focus include:
+* <strong>Technical Debt Reduction</strong>: Proactively addressing technical debt to minimize its impact on future development and maintenance efforts, ensuring a more agile and responsive IT environment.
+* <strong>Digital Velocity</strong>: Accelerating the pace of digital transformation, enabling HealthStream Solutions to respond quickly to changing market conditions, customer needs, and emerging trends.
+* <strong>Industrialized Delivery</strong>: Implementing standardized, repeatable, and efficient processes to streamline ADM services, reducing costs, and improving overall quality.</p>
+<h3>Partnership Value Proposition</h3>
+<p>By combining our expertise in strategic consulting, industrialized delivery, and technical debt reduction, we are confident that our partnership will yield significant benefits for HealthStream Solutions. With a projected TCV of $125,000,000, total savings of $41,250,000, and an ROI of 165.0%, our collaboration is poised to drive substantial value, enhance business outcomes, and solidify HealthStream Solutions' position as a leader in the healthcare industry.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            
         </div>
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const ctx = document.getElementById('savingsChart').getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
-                        datasets: [
-                            {
-                                label: 'Annual Investment ($)',
-                                data: [10000000.0, 6250000.0, 3750000.0, 2500000.0, 2500000.0],
-                                borderColor: '#007bff',
-                                borderDash: [5, 5],
-                                fill: false,
-                                tension: 0.1
-                            },
-                            {
-                                label: 'Cumulative Savings ($)',
-                                data: [3750000.0, 8750000.0, 13750000.000000002, 18750000.0, 21250000.0],
-                                borderColor: '#28a745',
-                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                                fill: true,
-                                tension: 0.3
+    </main>
+
+    <!-- App Logic -->
+    <script>
+        const sections = [
+            
+            { id: "Executive-Summary", name: "Executive Summary", num: "01" },
+            
+            { id: "Portfolio-Analysis", name: "Portfolio Analysis", num: "02" },
+            
+            { id: "App-Inventory", name: "App Inventory", num: "03" },
+            
+            { id: "Competitive-Benchmarking", name: "Competitive Benchmarking", num: "04" },
+            
+            { id: "AI-Transformation-Strategy", name: "AI Transformation Strategy", num: "05" },
+            
+            { id: "Modernization-Roadmap", name: "Modernization Roadmap", num: "06" },
+            
+            { id: "Cloud-&-Data-Strategy", name: "Cloud & Data Strategy", num: "07" },
+            
+            { id: "Financials", name: "Financials", num: "08" },
+            
+            { id: "Execution-Roadmap", name: "Execution Roadmap", num: "09" },
+            
+            { id: "Delivery-Center-Architecture", name: "Delivery Center Architecture", num: "10" },
+            
+            { id: "Benchmarking-Summary", name: "Benchmarking Summary", num: "11" },
+            
+            { id: "Partnership-Overview", name: "Partnership Overview", num: "12" },
+            
+        ];
+        
+        let currentSectionId = sections[0]?.id;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const chartCanvas = document.getElementById('savingsChart');
+            if (chartCanvas) {
+                initChart(chartCanvas);
+            }
+
+            if (currentSectionId) {
+                navigateTo(currentSectionId, true);
+            }
+            
+            // Init Cinematic Background
+            initBackground();
+
+            // Entrance Animation
+            gsap.to("#loader", {
+                opacity: 0,
+                duration: 1,
+                delay: 1.5,
+                ease: "power2.inOut",
+                onComplete: () => {
+                    document.getElementById('loader').style.display = 'none';
+                    gsap.from("aside", { x: -50, opacity: 0, duration: 1, ease: "power3.out", clearProps: "all" });
+                    gsap.from("header", { y: -20, opacity: 0, duration: 1, ease: "power3.out", delay: 0.2, clearProps: "all" });
+                    gsap.from(".nav-item", {
+                        x: -15,
+                        opacity: 0,
+                        duration: 0.6,
+                        stagger: 0.04,
+                        ease: "power2.out",
+                        delay: 0.5,
+                        clearProps: "all"
+                    });
+                }
+            });
+        });
+
+        function navigateTo(sectionId, initial = false) {
+            if (!initial && currentSectionId === sectionId) return;
+            
+            const prevSectionId = currentSectionId;
+            currentSectionId = sectionId;
+            const targetSectionData = sections.find(s => s.id === sectionId);
+            
+            // Nav states
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + sectionId);
+            if(activeNav) activeNav.classList.add('active');
+            
+            // Header states
+            const headerTitle = document.getElementById('current-section-title');
+            const headerNum = document.getElementById('current-section-number');
+            
+            const targetEl = document.getElementById('section-' + sectionId);
+            if(!targetEl) return;
+            
+            if (initial) {
+                targetEl.classList.add('active');
+                if(headerTitle) headerTitle.innerText = targetSectionData.name;
+                if(headerNum) headerNum.innerText = targetSectionData.num;
+                gsap.from(targetEl, { y: 15, opacity: 0, duration: 0.8, ease: "power3.out" });
+                gsap.from(targetEl.querySelectorAll('.glass-card'), {
+                    y: 20, opacity: 0, duration: 0.6, stagger: 0.1, delay: 0.2, ease: "power2.out"
+                });
+            } else {
+                const prevEl = document.getElementById('section-' + prevSectionId);
+                
+                // Header transition
+                if(headerTitle && headerNum) {
+                    gsap.to([headerTitle, headerNum], { 
+                        opacity: 0, y: -5, duration: 0.2, 
+                        onComplete: () => {
+                            headerTitle.innerText = targetSectionData.name;
+                            headerNum.innerText = targetSectionData.num;
+                            gsap.to([headerTitle, headerNum], { opacity: 1, y: 0, duration: 0.3 });
+                        }
+                    });
+                }
+
+                if(prevEl) {
+                    // Viewport transition
+                    gsap.to(prevEl, {
+                        opacity: 0,
+                        y: -15,
+                        filter: "blur(4px)",
+                        duration: 0.3,
+                        ease: "power2.in",
+                        onComplete: () => {
+                            prevEl.classList.remove('active');
+                            prevEl.style.opacity = "";
+                            prevEl.style.filter = "";
+                            prevEl.style.transform = "";
+                            
+                            targetEl.classList.add('active');
+                            gsap.fromTo(targetEl, 
+                                { opacity: 0, y: 15, filter: "blur(8px)" },
+                                { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.5, ease: "power3.out", clearProps: "filter,transform" }
+                            );
+                            
+                            gsap.fromTo(targetEl.querySelectorAll('.glass-card'),
+                                { opacity: 0, y: 15 },
+                                { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: "power2.out", delay: 0.1, clearProps: "transform" }
+                            );
+                        }
+                    });
+                } else {
+                    targetEl.classList.add('active');
+                }
+            }
+        }
+
+        function initBackground() {
+            const canvas = document.getElementById('canvas-bg');
+            const ctx = canvas.getContext('2d');
+            let width, height, particles = [];
+
+            function resize() {
+                width = canvas.width = window.innerWidth;
+                height = canvas.height = window.innerHeight;
+            }
+
+            class Particle {
+                constructor() {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.size = Math.random() * 2 + 0.5;
+                    this.speedX = Math.random() * 0.5 - 0.25;
+                    this.speedY = Math.random() * 0.5 - 0.25;
+                    this.opacity = Math.random() * 0.5;
+                }
+                update() {
+                    this.x += this.speedX;
+                    this.y += this.speedY;
+                    if (this.x > width) this.x = 0;
+                    if (this.x < 0) this.x = width;
+                    if (this.y > height) this.y = 0;
+                    if (this.y < 0) this.y = height;
+                }
+                draw() {
+                    ctx.fillStyle = `rgba(59, 130, 246, ${this.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function init() {
+                resize();
+                for (let i = 0; i < 100; i++) {
+                    particles.push(new Particle());
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                // Subtle gradient
+                const grad = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, width);
+                grad.addColorStop(0, '#0a0a0f');
+                grad.addColorStop(1, '#050505');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+
+                particles.forEach(p => {
+                    p.update();
+                    p.draw();
+                });
+                requestAnimationFrame(animate);
+            }
+
+            window.addEventListener('resize', resize);
+            init();
+            animate();
+        }
+
+        function initChart(canvas) {
+            const ctx = canvas.getContext('2d');
+            const savingsGradient = ctx.createLinearGradient(0, 0, 0, 350);
+            savingsGradient.addColorStop(0, 'rgba(16, 185, 129, 0.15)');
+            savingsGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+                    datasets: [
+                        {
+                            label: 'Transformation Investment ($)',
+                            data: [10000000.0, 6250000.0, 3750000.0, 2500000.0, 2500000.0],
+                            borderColor: '#3b82f6',
+                            borderWidth: 1.5,
+                            borderDash: [4, 4],
+                            pointBackgroundColor: '#050505',
+                            pointBorderColor: '#3b82f6',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 3,
+                            fill: false,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Cumulative Efficiency Savings ($)',
+                            data: [3750000.0, 8750000.0, 13750000.000000002, 18750000.0, 21250000.0],
+                            borderColor: '#10b981',
+                            borderWidth: 1.5,
+                            backgroundColor: savingsGradient,
+                            pointBackgroundColor: '#050505',
+                            pointBorderColor: '#10b981',
+                            pointBorderWidth: 1.5,
+                            pointRadius: 3,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: { 
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#64748b', font: { family: "'JetBrains Mono', monospace", size: 10 }, usePointStyle: true, boxWidth: 6 }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 15, 20, 0.95)',
+                            titleColor: '#f8fafc',
+                            titleFont: { family: "'Inter', sans-serif", size: 12 },
+                            bodyColor: '#cbd5e1',
+                            bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+                            borderColor: 'rgba(255,255,255,0.05)',
+                            borderWidth: 1,
+                            padding: 10,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: function(context) { return context.dataset.label.split('(')[0] + ': $' + context.parsed.y.toLocaleString(); }
                             }
-                        ]
+                        }
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: { 
-                                beginAtZero: true,
-                                ticks: {
-                                    callback: function(value) { return '$' + value.toLocaleString(); }
-                                }
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.02)', drawBorder: false },
+                            ticks: { color: '#475569', font: { family: "'JetBrains Mono', monospace", size: 10 } }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.02)', drawBorder: false },
+                            ticks: {
+                                color: '#475569',
+                                font: { family: "'JetBrains Mono', monospace", size: 10 },
+                                callback: function(value) { return '$' + (value / 1000000) + 'M'; }
                             }
                         }
                     }
-                });
+                }
             });
-        </script>
-        
-    </div>
-    
-    <div id="Execution-Roadmap" class="section-container">
-        <h2 class="section-title">Execution Roadmap</h2>
-        <div class="text-content">
-            <p><strong>Execution Roadmap</strong>
-The Execution Roadmap for HealthStream Solutions' Application Development and Maintenance (ADM) strategy is designed to unlock the full potential of their $25,000,000 annual investment. With a Total Contract Value (TCV) of $125,000,000 over 5 years, our approach will yield significant returns, including Total Savings of $41,250,000 and a remarkable ROI of 165.0%.</p>
-<h3>Strategic Objectives</h3>
-<p>To achieve these ambitious targets, we will focus on the following key objectives:
-* Industrialize delivery to increase efficiency and reduce costs
-* Address technical debt to improve application quality and reliability
-* Accelerate digital velocity to drive innovation and competitiveness</p>
-<h3>Implementation Plan</h3>
-<p>Our Execution Roadmap is structured around the following phases:
-* <strong>Assessment and Planning</strong>: Conduct a thorough analysis of HealthStream Solutions' current ADM landscape, identifying areas for improvement and opportunities for optimization. This phase will lay the foundation for the subsequent implementation phases.
-* <strong>Process Industrialization</strong>: Implement standardized processes and tools to industrialize delivery, ensuring consistency, quality, and efficiency across all ADM activities.
-* <strong>Technical Debt Remediation</strong>: Develop and execute a comprehensive plan to address technical debt, prioritizing the most critical applications and subsystems.
-* <strong>Digital Velocity Acceleration</strong>: Implement agile methodologies and DevOps practices to accelerate digital velocity, enabling HealthStream Solutions to respond rapidly to changing market conditions and customer needs.</p>
-<h3>Key Performance Indicators (KPIs)</h3>
-<p>To measure progress and success, we will track the following KPIs:
-* <strong>Cost Savings</strong>: Monitor and report on actual cost savings achieved through industrialized delivery and technical debt remediation, targeting a total of $41,250,000 over 5 years.
-* <strong>Application Quality</strong>: Track improvements in application quality and reliability, ensuring that technical debt remediation efforts yield tangible results.
-* <strong>Time-to-Market</strong>: Measure the reduction in time-to-market for new applications and features, demonstrating the effectiveness of accelerated digital velocity.</p>
-<h3>Benefits and ROI</h3>
-<p>By following this Execution Roadmap, HealthStream Solutions can expect to achieve a significant return on investment, with an estimated ROI of 165.0% over 5 years. This will be driven by the combination of cost savings, improved application quality, and accelerated digital velocity, ultimately yielding a TCV of $125,000,000.</p>
-        </div>
-
-        
-        
-        <div class="mt-4">
-            <h4 class="mb-3">Application Modernization Matrix (6-R Framework)</h4>
-            <table class="matrix-table">
-                <thead>
-                    <tr>
-                        <th>RETIRE</th><th>RETAIN</th><th>REHOST</th><th>REPLATFORM</th><th>REFACTOR</th><th>REARCHITECT</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td></td>
-                        <td>• Member-Mobile-App<br></td>
-                        <td>• Compliance-Tracker<br></td>
-                        <td>• Enrollment-Manager<br></td>
-                        <td>• Pharmacy-Gateway<br>• Provider-Credentialing<br></td>
-                        <td>• Legacy-Patient-Records<br></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
-
-        
-        
-    </div>
-    
-    <div id="Delivery-Center-Architecture" class="section-container">
-        <h2 class="section-title">Delivery Center Architecture</h2>
-        <div class="text-content">
-            <h1><strong>Delivery Center Architecture</strong></h1>
-<p>The proposed Delivery Center Architecture for HealthStream Solutions is designed to optimize Application Development and Maintenance (ADM) services, leveraging industrialized delivery models to achieve significant cost savings and improved digital velocity. With a current ADM spend of $25,000,000, our strategy aims to unlock a Total Contract Value (TCV) of $125,000,000 over a 5-year period, resulting in Total Savings of $41,250,000 and a remarkable Return on Investment (ROI) of 165.0%.</p>
-<h3>Key Insights</h3>
-<ul>
-<li>The proposed architecture will enable HealthStream Solutions to reduce technical debt by 30%, resulting in increased agility and responsiveness to changing market conditions.</li>
-<li>By adopting a standardized delivery framework, we expect to achieve a 25% reduction in ADM costs, contributing to the overall Total Savings of $41,250,000.</li>
-<li>The industrialized delivery model will facilitate a 20% increase in digital velocity, enabling HealthStream Solutions to accelerate the development and deployment of new applications and features.</li>
-</ul>
-<p>Our analysis indicates that the proposed Delivery Center Architecture will have a direct impact on the company's bottom line, with the potential to increase revenue through improved efficiency and reduced costs. By leveraging the proposed architecture, HealthStream Solutions can expect to achieve a significant reduction in ADM costs, resulting in a 5-year TCV of $125,000,000.</p>
-<h3>Architecture Components</h3>
-<p>The proposed Delivery Center Architecture consists of the following components:
-* <strong>Standardized Delivery Framework</strong>: A standardized framework for ADM services, ensuring consistency and quality across all delivery centers.
-* <strong>Industrialized Delivery Model</strong>: A model that leverages automation, artificial intelligence, and machine learning to optimize ADM processes and reduce costs.
-* <strong>Technical Debt Management</strong>: A structured approach to managing technical debt, ensuring that the organization's applications and systems remain up-to-date and aligned with business objectives.
-* <strong>Digital Velocity Acceleration</strong>: A set of strategies and tools designed to accelerate the development and deployment of new applications and features, enabling HealthStream Solutions to respond quickly to changing market conditions.</p>
-<p>By implementing the proposed Delivery Center Architecture, HealthStream Solutions can expect to achieve significant cost savings, improved digital velocity, and increased agility, ultimately resulting in a strong ROI of 165.0% and a 5-year TCV of $125,000,000.</p>
-        </div>
-
-        
-        
-
-        
-        
-    </div>
-    
-    <div id="Benchmarking-Summary" class="section-container">
-        <h2 class="section-title">Benchmarking Summary</h2>
-        <div class="text-content">
-            <p><strong>Benchmarking Summary</strong></p>
-<h3>Introduction to HealthStream Solutions' ADM Landscape</h3>
-<p>HealthStream Solutions, a leading player in the healthcare industry, has embarked on a transformative journey to optimize its Application Development and Maintenance (ADM) spend. With a current annual ADM spend of $25,000,000, the organization is poised to unlock significant value through industrialized delivery, reduction of technical debt, and enhancement of digital velocity. Our analysis reveals a compelling business case, with a 5-Year Total Contract Value (TCV) of $125,000,000, underscoring the potential for substantial returns on investment.</p>
-<h3>Key Insights and Findings</h3>
-<ul>
-<li>The proposed ADM strategy is expected to yield <strong>Total Savings</strong> of $41,250,000 over the 5-year period, representing a significant reduction in operational expenditures.</li>
-<li>With a <strong>Return on Investment (ROI)</strong> of 165.0%, the initiative demonstrates a strong potential for generating substantial value for the organization, far exceeding the initial investment.</li>
-<li>By adopting a structured approach to ADM, HealthStream Solutions can mitigate technical debt, enhance application quality, and improve time-to-market, ultimately driving business growth and competitiveness.</li>
-<li>The industrialized delivery model will enable the organization to streamline its application development and maintenance processes, leading to increased efficiency, reduced costs, and improved digital velocity.</li>
-</ul>
-<h3>Strategic Imperatives</h3>
-<p>The benchmarking analysis highlights the importance of a structured approach to ADM, focusing on the following strategic imperatives:
-* <strong>Optimization of Application Portfolio</strong>: Rationalizing the application portfolio to eliminate redundant or non-essential applications, reducing technical debt, and improving overall efficiency.
-* <strong>Industrialized Delivery</strong>: Adopting a standardized, repeatable, and scalable approach to application development and maintenance, enabling the organization to respond quickly to changing business needs.
-* <strong>Digital Velocity</strong>: Enhancing the organization's ability to deliver high-quality applications rapidly, improving time-to-market, and driving business growth through increased digital capabilities.</p>
-<h3>Conclusion</h3>
-<p>The benchmarking summary demonstrates the potential for HealthStream Solutions to achieve significant value through the optimization of its ADM spend. With a clear focus on industrialized delivery, reduction of technical debt, and enhancement of digital velocity, the organization can unlock substantial savings, drive business growth, and improve its competitive position in the healthcare industry. The proposed strategy is expected to yield a substantial ROI of 165.0%, underscoring the compelling business case for this initiative.</p>
-        </div>
-
-        
-        
-
-        
-        
-    </div>
-    
-    <div id="Partnership-Overview" class="section-container">
-        <h2 class="section-title">Partnership Overview</h2>
-        <div class="text-content">
-            <h3>Partnership Overview</h3>
-<p>The proposed partnership between HealthStream Solutions and our organization is poised to revolutionize the healthcare industry through the adoption of Application Development and Maintenance (ADM) services. With a current ADM spend of $25,000,000, HealthStream Solutions is well-positioned to leverage our expertise in Industrialized Delivery, Technical Debt reduction, and Digital Velocity enhancement to achieve significant cost savings and revenue growth.</p>
-<p>Our analysis indicates that the 5-Year Total Contract Value (TCV) of this partnership will be $125,000,000, representing a substantial investment in the future of healthcare technology. By implementing our ADM services, HealthStream Solutions can expect to realize Total Savings of $41,250,000.00, resulting in a Return on Investment (ROI) of 165.0%. This impressive ROI is a testament to the potential of our partnership to drive business value and growth.</p>
-<p>Key insights into the partnership include:
-* <strong>Cost Savings</strong>: The proposed partnership is expected to yield significant cost savings, with a total of $41,250,000.00 in savings over the 5-year contract period.
-* <strong>Revenue Growth</strong>: By leveraging our ADM services, HealthStream Solutions can drive revenue growth through improved Digital Velocity, enhanced customer experience, and increased competitiveness in the healthcare market.
-* <strong>Technical Debt Reduction</strong>: Our Industrialized Delivery approach will enable HealthStream Solutions to reduce Technical Debt, resulting in improved system reliability, reduced maintenance costs, and increased agility in responding to changing market conditions.
-* <strong>Digital Transformation</strong>: The partnership will facilitate HealthStream Solutions' digital transformation, enabling the organization to stay ahead of the curve in terms of technology adoption, innovation, and customer engagement.</p>
-<p>Through this partnership, HealthStream Solutions will be able to tap into our expertise in ADM, leveraging our capabilities to drive business growth, improve operational efficiency, and enhance customer satisfaction. With a strong focus on Digital Velocity, Technical Debt reduction, and Industrialized Delivery, we are confident that our partnership will yield significant benefits for HealthStream Solutions, resulting in a substantial ROI and positioning the organization for long-term success in the healthcare industry.</p>
-        </div>
-
-        
-        
-
-        
-        
-    </div>
-    
-</div>
-
+        }
+    </script>
 </body>
 </html>
